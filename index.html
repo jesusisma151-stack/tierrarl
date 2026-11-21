@@ -39,9 +39,9 @@ footer{background:var(--verde);color:white;text-align:center;padding:18px;margin
 .login-screen{position:fixed;inset:0;z-index:1000;background:linear-gradient(135deg,#123d30,#286b50);display:flex;align-items:center;justify-content:center;padding:18px}
 .login-card{background:#fff;width:100%;max-width:410px;padding:30px 25px;border-radius:14px;box-shadow:0 12px 35px #0004}
 .login-logo{text-align:center;color:var(--verde);font-size:30px;font-weight:bold;letter-spacing:2px;margin-bottom:8px}
-.login-sub{text-align:center;color:#666;margin-bottom:22px}
+.login-sub{text-align:center;color:#666;margin-bottom:22px; font-weight: bold;}
 .login-card .boton{width:100%;margin:8px 0 0;padding:13px}
-.login-error{color:#a94442;font-size:13px;min-height:18px;margin-top:10px}
+.login-error{font-size:13px;min-height:18px;margin-top:10px; text-align: center;}
 .usuario-activo{color:#e8d5a5;font-size:13px;margin-top:7px}
 
 @media(max-width:600px){header h1{font-size:25px}nav button{flex:1 1 28%;padding:9px 5px;font-size:12px}main{padding:12px}.panel{padding:13px}}
@@ -49,22 +49,39 @@ footer{background:var(--verde);color:white;text-align:center;padding:18px;margin
 </head>
 <body>
 
+<!-- PANTALLA DE ACCESO (LOGIN Y REGISTRO) -->
 <div id="pantallaAcceso" class="login-screen">
  <div class="login-card">
   <div class="login-logo">TIERRA RL</div>
-  <p class="login-sub">Sistema de administración y control del rancho</p>
-  <form id="formAcceso">
-   <label for="usuarioAcceso">Nombre de usuario</label>
-   <input id="usuarioAcceso" type="text" placeholder="Escribe tu nombre" autocomplete="username" required>
-   <label for="claveAcceso">Contraseña</label>
-   <input id="claveAcceso" type="password" placeholder="Escribe tu contraseña" autocomplete="current-password" required>
+  <p class="login-sub" id="loginSubtitulo">Inicia sesión para continuar</p>
+  
+  <!-- Formulario de Iniciar Sesión -->
+  <form id="formLogin">
+   <label>Nombre de usuario</label>
+   <input id="loginUsuario" type="text" placeholder="Tu usuario" required>
+   <label>Contraseña</label>
+   <input id="loginClave" type="password" placeholder="Tu contraseña" required>
    <button class="boton" type="submit">Entrar al sistema</button>
-   <p id="errorAcceso" class="login-error" role="alert"></p>
   </form>
-  <p class="nota">Escribe tu nombre y crea o ingresa una contraseña para entrar a esta demostración.</p>
+
+  <!-- Formulario de Registro (Oculto por defecto) -->
+  <form id="formRegistro" style="display: none;">
+   <label>Nombre de usuario (nuevo)</label>
+   <input id="regUsuario" type="text" placeholder="Elige un usuario" required>
+   <label>Contraseña</label>
+   <input id="regClave" type="password" placeholder="Crea una contraseña" required>
+   <button class="boton" type="submit" style="background: var(--dorado); color: var(--verde);">Crear Cuenta</button>
+  </form>
+
+  <p id="errorAcceso" class="login-error" role="alert"></p>
+  
+  <p class="nota" style="text-align: center; margin-top: 15px;">
+    <span id="toggleRegistro" style="color: var(--verde2); cursor: pointer; text-decoration: underline;">¿No tienes cuenta? Regístrate aquí</span>
+  </p>
  </div>
 </div>
 
+<!-- APLICACIÓN PRINCIPAL -->
 <header><h1>TIERRA RL</h1><p>Sistema de administración y control del rancho</p><p id="saludoUsuario" class="usuario-activo"></p><button id="cerrarSesion" class="boton boton-claro" type="button">Cerrar sesión</button></header>
 <nav>
 <button class="active" data-seccion="inicio">Inicio</button>
@@ -170,9 +187,9 @@ footer{background:var(--verde);color:white;text-align:center;padding:18px;margin
 <script type="module">
 // 1. Importaciones de Firebase
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getDatabase, ref, onValue, push, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+import { getDatabase, ref, onValue, push, remove, get, set } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-// 2. Configuración (Usamos la misma de tu proyecto del café)
+// 2. Configuración
 const firebaseConfig = {
     apiKey: "AIzaSyArLu0w7UVtuGufLfE1K7nLGD8NNScSPoY",
     authDomain: "lamatadecafejirl.firebaseapp.com",
@@ -188,54 +205,157 @@ const db = getDatabase(app);
 
 // 3. Variables Globales
 const datos = { potreros: [], ganado: [], mantenimiento: [], peones: [], gastos: [] };
+let usuarioActual = null;
+let unsubscribeDatos = null; 
 
-// 4. Escuchar cambios en Firebase en Tiempo Real
-const dbRef = ref(db, 'tierra-rl');
-onValue(dbRef, (snapshot) => {
-    const data = snapshot.val() || {};
-    
-    // Función para convertir el objeto de Firebase a Array (y guardar la key para borrar)
-    const aArray = (nodo) => data[nodo] ? Object.keys(data[nodo]).map(key => ({ ...data[nodo][key], fbKey: key })) : [];
-    
-    datos.potreros = aArray('potreros');
-    datos.ganado = aArray('ganado');
-    datos.mantenimiento = aArray('mantenimiento');
-    datos.peones = aArray('peones');
-    datos.gastos = aArray('gastos');
+// ==========================================
+// LÓGICA DE REGISTRO Y LOGIN
+// ==========================================
+const pantallaAcceso = document.getElementById('pantallaAcceso');
+const formLogin = document.getElementById('formLogin');
+const formRegistro = document.getElementById('formRegistro');
+const errorAcceso = document.getElementById('errorAcceso');
+const loginSubtitulo = document.getElementById('loginSubtitulo');
+const toggleRegistro = document.getElementById('toggleRegistro');
 
-    actualizarInterfaz(); // Redibujar pantalla cada vez que haya un cambio en la nube
+// Alternar entre Login y Registro
+toggleRegistro.addEventListener('click', () => {
+    errorAcceso.textContent = '';
+    if(formLogin.style.display === 'none') {
+        formLogin.style.display = 'block';
+        formRegistro.style.display = 'none';
+        loginSubtitulo.textContent = 'Inicia sesión para continuar';
+        toggleRegistro.textContent = '¿No tienes cuenta? Regístrate aquí';
+    } else {
+        formLogin.style.display = 'none';
+        formRegistro.style.display = 'block';
+        loginSubtitulo.textContent = 'Crea una cuenta nueva';
+        toggleRegistro.textContent = '¿Ya tienes cuenta? Inicia sesión';
+    }
 });
 
+// 1. Crear una cuenta nueva
+formRegistro.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const user = document.getElementById('regUsuario').value.trim().toLowerCase();
+    const pass = document.getElementById('regClave').value;
+    errorAcceso.style.color = 'var(--rojo)';
+
+    if(user.length < 3 || pass.length < 3) {
+        errorAcceso.textContent = 'El usuario y la contraseña deben tener al menos 3 letras.';
+        return;
+    }
+
+    const userRef = ref(db, 'usuarios/' + user);
+    const snapshot = await get(userRef);
+
+    if (snapshot.exists()) {
+        errorAcceso.textContent = 'Ese nombre de usuario ya está en uso. Elige otro.';
+        return;
+    }
+
+    // Guardar usuario en Firebase
+    await set(userRef, { password: pass });
+    errorAcceso.style.color = 'green';
+    errorAcceso.textContent = '¡Cuenta creada! Ahora inicia sesión.';
+    document.getElementById('regUsuario').value = '';
+    document.getElementById('regClave').value = '';
+    
+    setTimeout(() => { toggleRegistro.click(); }, 1500);
+});
+
+// 2. Iniciar Sesión
+formLogin.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const user = document.getElementById('loginUsuario').value.trim().toLowerCase();
+    const pass = document.getElementById('loginClave').value;
+    errorAcceso.style.color = 'var(--rojo)';
+
+    const userRef = ref(db, 'usuarios/' + user);
+    const snapshot = await get(userRef);
+
+    if (snapshot.exists() && snapshot.val().password === pass) {
+        usuarioActual = user;
+        sessionStorage.setItem('tierraRL_usuario', user); // Guarda la sesión
+        iniciarApp();
+    } else {
+        errorAcceso.textContent = 'Usuario o contraseña incorrectos.';
+    }
+});
+
+// 3. Cerrar Sesión
+document.getElementById('cerrarSesion').addEventListener('click', function() {
+    sessionStorage.removeItem('tierraRL_usuario');
+    usuarioActual = null;
+    if(unsubscribeDatos) unsubscribeDatos();
+    
+    document.getElementById('loginUsuario').value = '';
+    document.getElementById('loginClave').value = '';
+    document.getElementById('errorAcceso').textContent = '';
+    pantallaAcceso.style.display = 'flex';
+});
+
+// 4. Cargar los datos del usuario logueado
+function iniciarApp() {
+    document.getElementById('pantallaAcceso').style.display = 'none';
+    document.getElementById('saludoUsuario').textContent = 'Rancho de: ' + usuarioActual.toUpperCase();
+    
+    // La magia: Los datos se guardan en una carpeta con el nombre del usuario
+    const rutaBase = 'tierra-rl/datos/' + usuarioActual;
+    
+    if(unsubscribeDatos) unsubscribeDatos(); 
+    
+    const dbRef = ref(db, rutaBase);
+    unsubscribeDatos = onValue(dbRef, (snapshot) => {
+        const data = snapshot.val() || {};
+        const aArray = (nodo) => data[nodo] ? Object.keys(data[nodo]).map(key => ({ ...data[nodo][key], fbKey: key })) : [];
+        
+        datos.potreros = aArray('potreros');
+        datos.ganado = aArray('ganado');
+        datos.mantenimiento = aArray('mantenimiento');
+        datos.peones = aArray('peones');
+        datos.gastos = aArray('gastos');
+
+        actualizarInterfaz(); 
+    });
+}
+
+// Si recarga la página, mantener la sesión activa
+window.onload = () => {
+    const user = sessionStorage.getItem('tierraRL_usuario');
+    if(user) {
+        usuarioActual = user;
+        iniciarApp();
+    }
+};
+// ==========================================
+
+// Utilidades
 function moneda(v){return Number(v||0).toLocaleString('es-MX',{style:'currency',currency:'MXN'})}
 function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 
-// Lógica de Navegación (Sin cambios)
 document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()=>{
  document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));
  document.querySelectorAll('.seccion').forEach(x=>x.classList.remove('activa'));
  b.classList.add('active');document.getElementById(b.dataset.seccion).classList.add('activa');
 }));
 
-// Lógica de Eliminación con Firebase
 window.borrar = function(modulo, fbKey) {
     if(confirm('¿Deseas eliminar este registro?')) {
-        remove(ref(db, 'tierra-rl/' + modulo + '/' + fbKey));
+        remove(ref(db, 'tierra-rl/datos/' + usuarioActual + '/' + modulo + '/' + fbKey));
     }
 }
 
 function acciones(m, fbKey){return `<button class="boton borrar" type="button" onclick="borrar('${m}','${fbKey}')">Eliminar</button>`}
 
-// --- FORMULARIOS ---
-
-// Potreros
+// --- FORMULARIOS (Guardan en la carpeta del usuario) ---
 document.getElementById('formPotrero').addEventListener('submit',e=>{
  e.preventDefault();
  const estado=document.getElementById('pEstado').value, ha=Number(document.getElementById('pHectareas').value);
  let capacidad=Number(document.getElementById('pCapacidad').value||0);
  if(estado==='Alta'&&capacidad!==ha){alert('En estado Alta, la capacidad debe coincidir con las hectáreas.');return}
  if(estado==='Baja')capacidad=0;
- 
- push(ref(db, 'tierra-rl/potreros'), {
+ push(ref(db, 'tierra-rl/datos/' + usuarioActual + '/potreros'), {
      nombre: document.getElementById('pNombre').value,
      estado: estado,
      hectareas: ha,
@@ -247,10 +367,9 @@ document.getElementById('formPotrero').addEventListener('submit',e=>{
  e.target.reset(); alert('Potrero guardado en la nube.');
 });
 
-// Ganado
 document.getElementById('formGanado').addEventListener('submit',e=>{
  e.preventDefault();
- push(ref(db, 'tierra-rl/ganado'), {
+ push(ref(db, 'tierra-rl/datos/' + usuarioActual + '/ganado'), {
      id: document.getElementById('gId').value,
      tipo: document.getElementById('gTipo').value,
      cantidad: Number(document.getElementById('gCantidad').value),
@@ -260,7 +379,6 @@ document.getElementById('formGanado').addEventListener('submit',e=>{
  e.target.reset(); alert('Registro de ganado guardado.');
 });
 
-// Mantenimiento - Herbicidas
 const preciosH={'Dragón 101':290,'Defensa':280,'Togar':750,'UZZI 101':260};
 const hProducto = document.getElementById('hProducto');
 const hPrecio = document.getElementById('hPrecio');
@@ -271,7 +389,7 @@ document.getElementById('formHerbicida').addEventListener('submit',e=>{
  e.preventDefault();
  const cantidad=Number(document.getElementById('hCantidad').value);
  const precio=Number(hPrecio.value);
- push(ref(db, 'tierra-rl/mantenimiento'), {
+ push(ref(db, 'tierra-rl/datos/' + usuarioActual + '/mantenimiento'), {
      tipo: 'Herbicida',
      producto: hProducto.value,
      cantidad: cantidad,
@@ -283,7 +401,6 @@ document.getElementById('formHerbicida').addEventListener('submit',e=>{
  e.target.reset(); hPrecio.value=preciosH[hProducto.value]; alert('Herbicida guardado.');
 });
 
-// Mantenimiento - Agroquímicos
 const aProducto = document.getElementById('aProducto');
 const aPrecio = document.getElementById('aPrecio');
 aProducto.addEventListener('change',()=>aPrecio.value=aProducto.value==='Sulfato'?500:240);
@@ -293,7 +410,7 @@ document.getElementById('formAgro').addEventListener('submit',e=>{
  e.preventDefault();
  const cantidad=Number(document.getElementById('aCantidad').value);
  const precio=Number(aPrecio.value);
- push(ref(db, 'tierra-rl/mantenimiento'), {
+ push(ref(db, 'tierra-rl/datos/' + usuarioActual + '/mantenimiento'), {
      tipo: 'Agroquímico',
      producto: aProducto.value,
      cantidad: cantidad,
@@ -305,12 +422,11 @@ document.getElementById('formAgro').addEventListener('submit',e=>{
  e.target.reset(); aPrecio.value=500; alert('Agroquímico guardado.');
 });
 
-// Peones
 document.getElementById('formPeon').addEventListener('submit',e=>{
  e.preventDefault();
  const horas=Number(document.getElementById('tHoras').value);
  const pago=Number(document.getElementById('tPago').value);
- push(ref(db, 'tierra-rl/peones'), {
+ push(ref(db, 'tierra-rl/datos/' + usuarioActual + '/peones'), {
      nombre: document.getElementById('tNombre').value,
      horas: horas,
      pago: pago,
@@ -320,10 +436,9 @@ document.getElementById('formPeon').addEventListener('submit',e=>{
  e.target.reset(); alert('Pago registrado.');
 });
 
-// Gastos
 document.getElementById('formGasto').addEventListener('submit',e=>{
  e.preventDefault();
- push(ref(db, 'tierra-rl/gastos'), {
+ push(ref(db, 'tierra-rl/datos/' + usuarioActual + '/gastos'), {
      concepto: document.getElementById('xConcepto').value,
      cantidad: Number(document.getElementById('xCantidad').value),
      fecha: document.getElementById('xFecha').value,
@@ -349,7 +464,6 @@ function actualizarInterfaz(){
     const tGastos = document.getElementById('tablaGastos');
     tGastos.innerHTML = datos.gastos.map((g) => `<tr><td>${esc(g.concepto)}</td><td>${moneda(g.cantidad)}</td><td>${esc(g.fecha)}</td><td>${esc(g.obs)}</td><td>${acciones('gastos', g.fbKey)}</td></tr>`).join('');
 
-    // Resumen Inicio
     document.getElementById('resPotreros').textContent = datos.potreros.length;
     document.getElementById('resGanado').textContent = datos.ganado.length;
     document.getElementById('resPeones').textContent = datos.peones.length;
@@ -358,32 +472,6 @@ function actualizarInterfaz(){
     document.getElementById('resGastos').textContent = moneda(totalGastos);
     document.getElementById('sumaGastos').textContent = 'Total de gastos: ' + moneda(totalGastos);
 }
-
-// --- LÓGICA DE LOGIN (Se mantiene usando sessionStorage para no complicar la seguridad) ---
-const pantallaAcceso = document.getElementById('pantallaAcceso');
-const formAcceso = document.getElementById('formAcceso');
-
-formAcceso.addEventListener('submit', function(evento) {
- evento.preventDefault();
- const nombre = document.getElementById('usuarioAcceso').value.trim();
- const clave = document.getElementById('claveAcceso').value;
- if (!nombre || !clave.trim()) {
-  document.getElementById('errorAcceso').textContent = 'Escribe tu nombre y contraseña para continuar.';
-  return;
- }
- sessionStorage.setItem('tierraRL_usuario', nombre);
- document.getElementById('saludoUsuario').textContent = 'Sesión iniciada: ' + nombre;
- pantallaAcceso.style.display = 'none';
- document.getElementById('claveAcceso').value = '';
-});
-
-document.getElementById('cerrarSesion').addEventListener('click', function() {
- sessionStorage.removeItem('tierraRL_usuario');
- document.getElementById('usuarioAcceso').value = '';
- document.getElementById('claveAcceso').value = '';
- document.getElementById('errorAcceso').textContent = '';
- pantallaAcceso.style.display = 'flex';
-});
 </script>
 </body>
 </html>
