@@ -1,4 +1,5 @@
-lang="es">
+<!DOCTYPE html>
+<html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -166,107 +167,223 @@ footer{background:var(--verde);color:white;text-align:center;padding:18px;margin
 </main>
 <footer><p>TIERRA RL | Sistema de administración y control del rancho</p><p>Proyecto escolar | CBTIS No. 67</p></footer>
 
-<script>
+<script type="module">
+// 1. Importaciones de Firebase
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getDatabase, ref, onValue, push, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-// Pantalla de acceso de demostración
-const pantallaAcceso = document.getElementById('pantallaAcceso');
-const formAcceso = document.getElementById('formAcceso');
-const usuarioAcceso = document.getElementById('usuarioAcceso');
-const claveAcceso = document.getElementById('claveAcceso');
-const errorAcceso = document.getElementById('errorAcceso');
+// 2. Configuración (Usamos la misma de tu proyecto del café)
+const firebaseConfig = {
+    apiKey: "AIzaSyArLu0w7UVtuGufLfE1K7nLGD8NNScSPoY",
+    authDomain: "lamatadecafejirl.firebaseapp.com",
+    databaseURL: "https://lamatadecafejirl-default-rtdb.firebaseio.com",
+    projectId: "lamatadecafejirl",
+    storageBucket: "lamatadecafejirl.firebasestorage.app",
+    messagingSenderId: "755151796533",
+    appId: "1:755151796533:web:7787740e611d5aaaba347c"
+};
 
-formAcceso.addEventListener('submit', function(evento) {
- evento.preventDefault();
- const nombre = usuarioAcceso.value.trim();
- const clave = claveAcceso.value;
- if (!nombre || !clave.trim()) {
-  errorAcceso.textContent = 'Escribe tu nombre y contraseña para continuar.';
-  return;
- }
- sessionStorage.setItem('tierraRL_usuario', nombre);
- document.getElementById('saludoUsuario').textContent = 'Sesión iniciada: ' + nombre;
- pantallaAcceso.style.display = 'none';
- claveAcceso.value = '';
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+// 3. Variables Globales
+const datos = { potreros: [], ganado: [], mantenimiento: [], peones: [], gastos: [] };
+
+// 4. Escuchar cambios en Firebase en Tiempo Real
+const dbRef = ref(db, 'tierra-rl');
+onValue(dbRef, (snapshot) => {
+    const data = snapshot.val() || {};
+    
+    // Función para convertir el objeto de Firebase a Array (y guardar la key para borrar)
+    const aArray = (nodo) => data[nodo] ? Object.keys(data[nodo]).map(key => ({ ...data[nodo][key], fbKey: key })) : [];
+    
+    datos.potreros = aArray('potreros');
+    datos.ganado = aArray('ganado');
+    datos.mantenimiento = aArray('mantenimiento');
+    datos.peones = aArray('peones');
+    datos.gastos = aArray('gastos');
+
+    actualizarInterfaz(); // Redibujar pantalla cada vez que haya un cambio en la nube
 });
 
-document.getElementById('cerrarSesion').addEventListener('click', function() {
- sessionStorage.removeItem('tierraRL_usuario');
- usuarioAcceso.value = '';
- claveAcceso.value = '';
- errorAcceso.textContent = '';
- pantallaAcceso.style.display = 'flex';
-});
-
-const modulos=['potreros','ganado','mantenimiento','peones','gastos'];
-const datos={};
-function leer(clave){try{return JSON.parse(localStorage.getItem('tierraRL_'+clave))||[]}catch(e){return []}}
-modulos.forEach(m=>datos[m]=leer(m));
-function persistir(m){localStorage.setItem('tierraRL_'+m,JSON.stringify(datos[m]))}
-function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function moneda(v){return Number(v||0).toLocaleString('es-MX',{style:'currency',currency:'MXN'})}
+function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+
+// Lógica de Navegación (Sin cambios)
 document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()=>{
  document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));
  document.querySelectorAll('.seccion').forEach(x=>x.classList.remove('activa'));
  b.classList.add('active');document.getElementById(b.dataset.seccion).classList.add('activa');
 }));
-function borrar(m,i){if(confirm('¿Deseas eliminar este registro?')){datos[m].splice(i,1);persistir(m);actualizar()}}
-function acciones(m,i){return `<button class="boton borrar" type="button" onclick="borrar('${m}',${i})">Eliminar</button>`}
 
+// Lógica de Eliminación con Firebase
+window.borrar = function(modulo, fbKey) {
+    if(confirm('¿Deseas eliminar este registro?')) {
+        remove(ref(db, 'tierra-rl/' + modulo + '/' + fbKey));
+    }
+}
+
+function acciones(m, fbKey){return `<button class="boton borrar" type="button" onclick="borrar('${m}','${fbKey}')">Eliminar</button>`}
+
+// --- FORMULARIOS ---
+
+// Potreros
 document.getElementById('formPotrero').addEventListener('submit',e=>{
  e.preventDefault();
  const estado=document.getElementById('pEstado').value, ha=Number(document.getElementById('pHectareas').value);
  let capacidad=Number(document.getElementById('pCapacidad').value||0);
  if(estado==='Alta'&&capacidad!==ha){alert('En estado Alta, la capacidad debe coincidir con las hectáreas.');return}
  if(estado==='Baja')capacidad=0;
- datos.potreros.push({nombre:pNombre.value,estado,hectareas:ha,pasto:pPasto.value,capacidad,fecha:pFecha.value,obs:pObs.value});
- persistir('potreros');e.target.reset();actualizar();alert('Potrero guardado.');
+ 
+ push(ref(db, 'tierra-rl/potreros'), {
+     nombre: document.getElementById('pNombre').value,
+     estado: estado,
+     hectareas: ha,
+     pasto: document.getElementById('pPasto').value,
+     capacidad: capacidad,
+     fecha: document.getElementById('pFecha').value,
+     obs: document.getElementById('pObs').value
+ });
+ e.target.reset(); alert('Potrero guardado en la nube.');
 });
-function pintarPotreros(){tablaPotreros.innerHTML=datos.potreros.map((p,i)=>`<tr><td>${esc(p.nombre)}</td><td><span class="estado ${p.estado.toLowerCase()}">${esc(p.estado)}</span></td><td>${p.hectareas}</td><td>${esc(p.pasto)}</td><td>${p.capacidad}</td><td>${esc(p.fecha)}</td><td>${esc(p.obs)}</td><td>${acciones('potreros',i)}</td></tr>`).join('')}
 
+// Ganado
 document.getElementById('formGanado').addEventListener('submit',e=>{
- e.preventDefault();datos.ganado.push({id:gId.value,tipo:gTipo.value,cantidad:Number(gCantidad.value),potrero:gPotrero.value,fecha:gFecha.value});
- persistir('ganado');e.target.reset();actualizar();alert('Registro de ganado guardado.');
+ e.preventDefault();
+ push(ref(db, 'tierra-rl/ganado'), {
+     id: document.getElementById('gId').value,
+     tipo: document.getElementById('gTipo').value,
+     cantidad: Number(document.getElementById('gCantidad').value),
+     potrero: document.getElementById('gPotrero').value,
+     fecha: document.getElementById('gFecha').value
+ });
+ e.target.reset(); alert('Registro de ganado guardado.');
 });
-function pintarGanado(){tablaGanado.innerHTML=datos.ganado.map((g,i)=>`<tr><td>${esc(g.id)}</td><td>${esc(g.tipo)}</td><td>${g.cantidad}</td><td>${esc(g.potrero)}</td><td>${esc(g.fecha)}</td><td>${acciones('ganado',i)}</td></tr>`).join('')}
 
+// Mantenimiento - Herbicidas
 const preciosH={'Dragón 101':290,'Defensa':280,'Togar':750,'UZZI 101':260};
+const hProducto = document.getElementById('hProducto');
+const hPrecio = document.getElementById('hPrecio');
 hProducto.addEventListener('change',()=>hPrecio.value=preciosH[hProducto.value]);
 hPrecio.value=preciosH[hProducto.value];
+
 document.getElementById('formHerbicida').addEventListener('submit',e=>{
- e.preventDefault();const cantidad=Number(hCantidad.value),precio=Number(hPrecio.value);
- datos.mantenimiento.push({tipo:'Herbicida',producto:hProducto.value,cantidad,precio,total:cantidad*precio,potrero:hPotrero.value,fecha:hFecha.value});
- persistir('mantenimiento');e.target.reset();hPrecio.value=preciosH[hProducto.value];actualizar();alert('Herbicida guardado.');
+ e.preventDefault();
+ const cantidad=Number(document.getElementById('hCantidad').value);
+ const precio=Number(hPrecio.value);
+ push(ref(db, 'tierra-rl/mantenimiento'), {
+     tipo: 'Herbicida',
+     producto: hProducto.value,
+     cantidad: cantidad,
+     precio: precio,
+     total: cantidad*precio,
+     potrero: document.getElementById('hPotrero').value,
+     fecha: document.getElementById('hFecha').value
+ });
+ e.target.reset(); hPrecio.value=preciosH[hProducto.value]; alert('Herbicida guardado.');
 });
+
+// Mantenimiento - Agroquímicos
+const aProducto = document.getElementById('aProducto');
+const aPrecio = document.getElementById('aPrecio');
 aProducto.addEventListener('change',()=>aPrecio.value=aProducto.value==='Sulfato'?500:240);
 aPrecio.value=500;
+
 document.getElementById('formAgro').addEventListener('submit',e=>{
- e.preventDefault();const cantidad=Number(aCantidad.value),precio=Number(aPrecio.value);
- datos.mantenimiento.push({tipo:'Agroquímico',producto:aProducto.value,cantidad,precio,total:cantidad*precio,potrero:aPotrero.value,fecha:aFecha.value});
- persistir('mantenimiento');e.target.reset();aPrecio.value=500;actualizar();alert('Agroquímico guardado.');
+ e.preventDefault();
+ const cantidad=Number(document.getElementById('aCantidad').value);
+ const precio=Number(aPrecio.value);
+ push(ref(db, 'tierra-rl/mantenimiento'), {
+     tipo: 'Agroquímico',
+     producto: aProducto.value,
+     cantidad: cantidad,
+     precio: precio,
+     total: cantidad*precio,
+     potrero: document.getElementById('aPotrero').value,
+     fecha: document.getElementById('aFecha').value
+ });
+ e.target.reset(); aPrecio.value=500; alert('Agroquímico guardado.');
 });
-function pintarMantenimiento(){tablaMantenimiento.innerHTML=datos.mantenimiento.map((m,i)=>`<tr><td>${esc(m.tipo)}</td><td>${esc(m.producto)}</td><td>${m.cantidad}</td><td>${moneda(m.precio)}</td><td>${moneda(m.total)}</td><td>${esc(m.potrero)}</td><td>${esc(m.fecha)}</td><td>${acciones('mantenimiento',i)}</td></tr>`).join('')}
 
+// Peones
 document.getElementById('formPeon').addEventListener('submit',e=>{
- e.preventDefault();const horas=Number(tHoras.value),pago=Number(tPago.value);
- datos.peones.push({nombre:tNombre.value,horas,pago,total:horas*pago,fecha:tFecha.value});
- persistir('peones');e.target.reset();actualizar();alert('Pago registrado.');
+ e.preventDefault();
+ const horas=Number(document.getElementById('tHoras').value);
+ const pago=Number(document.getElementById('tPago').value);
+ push(ref(db, 'tierra-rl/peones'), {
+     nombre: document.getElementById('tNombre').value,
+     horas: horas,
+     pago: pago,
+     total: horas*pago,
+     fecha: document.getElementById('tFecha').value
+ });
+ e.target.reset(); alert('Pago registrado.');
 });
-function pintarPeones(){tablaPeones.innerHTML=datos.peones.map((p,i)=>`<tr><td>${esc(p.nombre)}</td><td>${p.horas}</td><td>${moneda(p.pago)}</td><td>${moneda(p.total)}</td><td>${esc(p.fecha)}</td><td>${acciones('peones',i)}</td></tr>`).join('')}
 
+// Gastos
 document.getElementById('formGasto').addEventListener('submit',e=>{
- e.preventDefault();datos.gastos.push({concepto:xConcepto.value,cantidad:Number(xCantidad.value),fecha:xFecha.value,obs:xObs.value});
- persistir('gastos');e.target.reset();actualizar();alert('Gasto guardado.');
+ e.preventDefault();
+ push(ref(db, 'tierra-rl/gastos'), {
+     concepto: document.getElementById('xConcepto').value,
+     cantidad: Number(document.getElementById('xCantidad').value),
+     fecha: document.getElementById('xFecha').value,
+     obs: document.getElementById('xObs').value
+ });
+ e.target.reset(); alert('Gasto guardado.');
 });
-function pintarGastos(){tablaGastos.innerHTML=datos.gastos.map((g,i)=>`<tr><td>${esc(g.concepto)}</td><td>${moneda(g.cantidad)}</td><td>${esc(g.fecha)}</td><td>${esc(g.obs)}</td><td>${acciones('gastos',i)}</td></tr>`).join('');
- sumaGastos.textContent='Total de gastos: '+moneda(datos.gastos.reduce((s,g)=>s+Number(g.cantidad),0));
+
+// --- RENDERIZADO DE TABLAS ---
+function actualizarInterfaz(){
+    const tPotreros = document.getElementById('tablaPotreros');
+    tPotreros.innerHTML = datos.potreros.map((p) => `<tr><td>${esc(p.nombre)}</td><td><span class="estado ${p.estado.toLowerCase()}">${esc(p.estado)}</span></td><td>${p.hectareas}</td><td>${esc(p.pasto)}</td><td>${p.capacidad}</td><td>${esc(p.fecha)}</td><td>${esc(p.obs)}</td><td>${acciones('potreros', p.fbKey)}</td></tr>`).join('');
+
+    const tGanado = document.getElementById('tablaGanado');
+    tGanado.innerHTML = datos.ganado.map((g) => `<tr><td>${esc(g.id)}</td><td>${esc(g.tipo)}</td><td>${g.cantidad}</td><td>${esc(g.potrero)}</td><td>${esc(g.fecha)}</td><td>${acciones('ganado', g.fbKey)}</td></tr>`).join('');
+
+    const tMantenimiento = document.getElementById('tablaMantenimiento');
+    tMantenimiento.innerHTML = datos.mantenimiento.map((m) => `<tr><td>${esc(m.tipo)}</td><td>${esc(m.producto)}</td><td>${m.cantidad}</td><td>${moneda(m.precio)}</td><td>${moneda(m.total)}</td><td>${esc(m.potrero)}</td><td>${esc(m.fecha)}</td><td>${acciones('mantenimiento', m.fbKey)}</td></tr>`).join('');
+
+    const tPeones = document.getElementById('tablaPeones');
+    tPeones.innerHTML = datos.peones.map((p) => `<tr><td>${esc(p.nombre)}</td><td>${p.horas}</td><td>${moneda(p.pago)}</td><td>${moneda(p.total)}</td><td>${esc(p.fecha)}</td><td>${acciones('peones', p.fbKey)}</td></tr>`).join('');
+
+    const tGastos = document.getElementById('tablaGastos');
+    tGastos.innerHTML = datos.gastos.map((g) => `<tr><td>${esc(g.concepto)}</td><td>${moneda(g.cantidad)}</td><td>${esc(g.fecha)}</td><td>${esc(g.obs)}</td><td>${acciones('gastos', g.fbKey)}</td></tr>`).join('');
+
+    // Resumen Inicio
+    document.getElementById('resPotreros').textContent = datos.potreros.length;
+    document.getElementById('resGanado').textContent = datos.ganado.length;
+    document.getElementById('resPeones').textContent = datos.peones.length;
+    
+    const totalGastos = datos.gastos.reduce((s,g)=>s+Number(g.cantidad),0);
+    document.getElementById('resGastos').textContent = moneda(totalGastos);
+    document.getElementById('sumaGastos').textContent = 'Total de gastos: ' + moneda(totalGastos);
 }
-function actualizar(){
- pintarPotreros();pintarGanado();pintarMantenimiento();pintarPeones();pintarGastos();
- resPotreros.textContent=datos.potreros.length;resGanado.textContent=datos.ganado.length;
- resPeones.textContent=datos.peones.length;
- resGastos.textContent=moneda(datos.gastos.reduce((s,g)=>s+Number(g.cantidad),0));
-}
-actualizar();
+
+// --- LÓGICA DE LOGIN (Se mantiene usando sessionStorage para no complicar la seguridad) ---
+const pantallaAcceso = document.getElementById('pantallaAcceso');
+const formAcceso = document.getElementById('formAcceso');
+
+formAcceso.addEventListener('submit', function(evento) {
+ evento.preventDefault();
+ const nombre = document.getElementById('usuarioAcceso').value.trim();
+ const clave = document.getElementById('claveAcceso').value;
+ if (!nombre || !clave.trim()) {
+  document.getElementById('errorAcceso').textContent = 'Escribe tu nombre y contraseña para continuar.';
+  return;
+ }
+ sessionStorage.setItem('tierraRL_usuario', nombre);
+ document.getElementById('saludoUsuario').textContent = 'Sesión iniciada: ' + nombre;
+ pantallaAcceso.style.display = 'none';
+ document.getElementById('claveAcceso').value = '';
+});
+
+document.getElementById('cerrarSesion').addEventListener('click', function() {
+ sessionStorage.removeItem('tierraRL_usuario');
+ document.getElementById('usuarioAcceso').value = '';
+ document.getElementById('claveAcceso').value = '';
+ document.getElementById('errorAcceso').textContent = '';
+ pantallaAcceso.style.display = 'flex';
+});
 </script>
 </body>
 </html>
