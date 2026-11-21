@@ -1,0 +1,272 @@
+lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TIERRA RL | Administración del rancho</title>
+<style>
+:root{--verde:#174b3a;--verde2:#286b50;--crema:#f4f0e5;--dorado:#d9c79e;--texto:#26372e;--rojo:#a94442}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;background:var(--crema);color:var(--texto)}
+header{background:var(--verde);color:white;text-align:center;padding:26px 15px}
+header h1{font-size:30px;letter-spacing:2px}
+header p{color:#e8d5a5;margin-top:8px}
+nav{background:var(--dorado);display:flex;flex-wrap:wrap;justify-content:center;gap:5px;padding:10px}
+nav button{border:0;border-radius:6px;padding:11px 14px;background:transparent;color:var(--verde);font-weight:bold;cursor:pointer}
+nav button.active,nav button:hover{background:var(--verde);color:white}
+main{max-width:1100px;margin:auto;padding:20px}
+.seccion{display:none}.seccion.activa{display:block}
+h2{color:var(--verde);margin-bottom:15px}h3{color:var(--verde);margin:12px 0}
+p{line-height:1.55}
+.panel,.tarjeta,.bienvenida{background:white;border-radius:10px;padding:18px;margin:15px 0;box-shadow:0 2px 8px #00000012}
+.tarjetas{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.tarjeta{border-left:5px solid var(--verde2);margin:0}
+.tarjeta strong{display:block;color:var(--verde2);font-size:22px;margin-top:8px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+label{display:block;font-weight:bold;color:var(--verde);font-size:14px;margin-top:8px}
+input,select,textarea{width:100%;padding:11px;border:1px solid #c9c9c0;border-radius:6px;margin:6px 0 10px;font:inherit;background:white}
+.boton{background:var(--verde);color:white;border:0;border-radius:6px;padding:11px 16px;font-weight:bold;cursor:pointer;margin:4px 2px}
+.boton:hover{background:var(--verde2)}.borrar{background:var(--rojo)}
+.tabla{overflow-x:auto;margin-top:12px}
+table{width:100%;border-collapse:collapse;min-width:650px;background:white}
+th,td{padding:10px;border:1px solid #ddd;text-align:center;font-size:14px}
+th{background:var(--verde);color:white}tr:nth-child(even){background:#f4f0e5}
+.estado{padding:5px 9px;border-radius:15px;font-weight:bold;font-size:12px}
+.alta{background:#d8eddb;color:#246b37}.media{background:#fff0c5;color:#866014}.baja{background:#f4d5d1;color:#913a32}
+.nota{font-size:13px;color:#555;margin:8px 0}
+footer{background:var(--verde);color:white;text-align:center;padding:18px;margin-top:25px}
+
+.login-screen{position:fixed;inset:0;z-index:1000;background:linear-gradient(135deg,#123d30,#286b50);display:flex;align-items:center;justify-content:center;padding:18px}
+.login-card{background:#fff;width:100%;max-width:410px;padding:30px 25px;border-radius:14px;box-shadow:0 12px 35px #0004}
+.login-logo{text-align:center;color:var(--verde);font-size:30px;font-weight:bold;letter-spacing:2px;margin-bottom:8px}
+.login-sub{text-align:center;color:#666;margin-bottom:22px}
+.login-card .boton{width:100%;margin:8px 0 0;padding:13px}
+.login-error{color:#a94442;font-size:13px;min-height:18px;margin-top:10px}
+.usuario-activo{color:#e8d5a5;font-size:13px;margin-top:7px}
+
+@media(max-width:600px){header h1{font-size:25px}nav button{flex:1 1 28%;padding:9px 5px;font-size:12px}main{padding:12px}.panel{padding:13px}}
+</style>
+</head>
+<body>
+
+<div id="pantallaAcceso" class="login-screen">
+ <div class="login-card">
+  <div class="login-logo">TIERRA RL</div>
+  <p class="login-sub">Sistema de administración y control del rancho</p>
+  <form id="formAcceso">
+   <label for="usuarioAcceso">Nombre de usuario</label>
+   <input id="usuarioAcceso" type="text" placeholder="Escribe tu nombre" autocomplete="username" required>
+   <label for="claveAcceso">Contraseña</label>
+   <input id="claveAcceso" type="password" placeholder="Escribe tu contraseña" autocomplete="current-password" required>
+   <button class="boton" type="submit">Entrar al sistema</button>
+   <p id="errorAcceso" class="login-error" role="alert"></p>
+  </form>
+  <p class="nota">Escribe tu nombre y crea o ingresa una contraseña para entrar a esta demostración.</p>
+ </div>
+</div>
+
+<header><h1>TIERRA RL</h1><p>Sistema de administración y control del rancho</p><p id="saludoUsuario" class="usuario-activo"></p><button id="cerrarSesion" class="boton boton-claro" type="button">Cerrar sesión</button></header>
+<nav>
+<button class="active" data-seccion="inicio">Inicio</button>
+<button data-seccion="potreros">Potreros</button>
+<button data-seccion="ganado">Ganado</button>
+<button data-seccion="mantenimiento">Mantenimiento</button>
+<button data-seccion="peones">Peones</button>
+<button data-seccion="gastos">Gastos</button>
+</nav>
+<main>
+<section id="inicio" class="seccion activa">
+<div class="bienvenida"><h2>Bienvenido a TIERRA RL</h2>
+<p>TIERRA RL es un sistema web para organizar la información y las actividades del rancho. Permite registrar potreros, ganado, mantenimiento, pagos de peones y gastos en un solo lugar.</p></div>
+<div class="tarjetas">
+<div class="tarjeta"><h3>Potreros</h3><p>Clasificación por estado y superficie.</p><strong id="resPotreros">0</strong></div>
+<div class="tarjeta"><h3>Ganado</h3><p>Registros capturados.</p><strong id="resGanado">0</strong></div>
+<div class="tarjeta"><h3>Peones</h3><p>Registros de trabajo.</p><strong id="resPeones">0</strong></div>
+<div class="tarjeta"><h3>Gastos</h3><p>Total registrado.</p><strong id="resGastos">$0.00</strong></div>
+</div>
+<div class="panel"><h3>¿Qué se puede realizar?</h3><p>Desde el menú superior se puede ingresar a cada módulo, capturar información, consultar los registros y eliminar datos cuando sea necesario.</p></div>
+</section>
+
+<section id="potreros" class="seccion">
+<h2>Administración de potreros</h2>
+<div class="tarjetas">
+<div class="tarjeta"><h3>Alta</h3><p>Potreros en buenas condiciones.</p></div>
+<div class="tarjeta"><h3>Media</h3><p>Potreros que requieren seguimiento.</p></div>
+<div class="tarjeta"><h3>Baja</h3><p>Potreros destinados a mantenimiento.</p></div>
+</div>
+<div class="panel"><h3>Registrar potrero</h3>
+<form id="formPotrero"><div class="grid">
+<div><label>Nombre del potrero</label><input id="pNombre" placeholder="Ej. Potrero 1" required></div>
+<div><label>Estado</label><select id="pEstado"><option>Alta</option><option>Media</option><option>Baja</option></select></div>
+<div><label>Hectáreas</label><input id="pHectareas" type="number" min="1" step="1" required></div>
+<div><label>Tipo de pasto</label><input id="pPasto" placeholder="Tipo de pasto" required></div>
+<div><label>Capacidad de vacas</label><input id="pCapacidad" type="number" min="0" step="1"></div>
+<div><label>Fecha de registro</label><input id="pFecha" type="date" required></div>
+</div><label>Observaciones</label><textarea id="pObs" rows="2"></textarea>
+<p class="nota">En estado Baja, la capacidad se registra en cero por mantenimiento. En estado Alta, la capacidad debe coincidir con las hectáreas.</p>
+<button class="boton">Guardar potrero</button></form></div>
+<div class="panel"><h3>Registros de potreros</h3><div class="tabla"><table><thead><tr><th>Potrero</th><th>Estado</th><th>Hectáreas</th><th>Tipo de pasto</th><th>Capacidad</th><th>Fecha</th><th>Observaciones</th><th>Acción</th></tr></thead><tbody id="tablaPotreros"></tbody></table></div></div>
+</section>
+
+<section id="ganado" class="seccion">
+<h2>Control de ganado</h2>
+<div class="panel"><h3>Registrar ganado</h3><form id="formGanado"><div class="grid">
+<div><label>Identificación</label><input id="gId" required></div>
+<div><label>Tipo de ganado</label><select id="gTipo"><option>Bovino</option><option>Vaca</option><option>Toro</option><option>Novillo</option><option>Ternero</option></select></div>
+<div><label>Cantidad</label><input id="gCantidad" type="number" min="1" step="1" required></div>
+<div><label>Potrero asignado</label><input id="gPotrero"></div>
+<div><label>Fecha</label><input id="gFecha" type="date" required></div>
+</div><button class="boton">Guardar registro</button></form></div>
+<div class="panel"><h3>Lista de ganado</h3><div class="tabla"><table><thead><tr><th>Identificación</th><th>Tipo</th><th>Cantidad</th><th>Potrero</th><th>Fecha</th><th>Acción</th></tr></thead><tbody id="tablaGanado"></tbody></table></div></div>
+</section>
+
+<section id="mantenimiento" class="seccion">
+<h2>Mantenimiento del rancho</h2>
+<div class="panel"><h3>Herbicidas</h3><div class="tabla"><table><thead><tr><th>Producto</th><th>Precio por litro</th><th>Dosis de referencia por hectárea</th></tr></thead><tbody>
+<tr><td>Dragón 101</td><td>$290</td><td>3 a 5 litros</td></tr><tr><td>Defensa</td><td>$280</td><td>3 a 5 litros</td></tr><tr><td>Togar</td><td>$750</td><td>2 litros</td></tr><tr><td>UZZI 101</td><td>$260</td><td>3 a 5 litros</td></tr>
+</tbody></table></div></div>
+<div class="panel"><h3>Registrar herbicida</h3><form id="formHerbicida"><div class="grid">
+<div><label>Producto</label><select id="hProducto"><option>Dragón 101</option><option>Defensa</option><option>Togar</option><option>UZZI 101</option></select></div>
+<div><label>Litros utilizados</label><input id="hCantidad" type="number" min="0.1" step="0.1" required></div>
+<div><label>Precio por litro ($)</label><input id="hPrecio" type="number" min="0" required></div>
+<div><label>Potrero</label><input id="hPotrero"></div>
+<div><label>Fecha</label><input id="hFecha" type="date" required></div>
+</div><button class="boton">Guardar herbicida</button></form></div>
+<div class="panel"><h3>Agroquímicos</h3><div class="tabla"><table><thead><tr><th>Producto</th><th>Presentación</th><th>Precio por bulto</th><th>Referencia por hectárea</th></tr></thead><tbody>
+<tr><td>Sulfato</td><td>50 kg</td><td>$500</td><td>4 a 6 bultos</td></tr><tr><td>Abono orgánico</td><td>50 kg</td><td>$240 a $300</td><td>20 a 40 bultos</td></tr>
+</tbody></table></div></div>
+<div class="panel"><h3>Registrar agroquímico</h3><form id="formAgro"><div class="grid">
+<div><label>Producto</label><select id="aProducto"><option>Sulfato</option><option>Abono orgánico</option></select></div>
+<div><label>Cantidad de bultos</label><input id="aCantidad" type="number" min="1" step="1" required></div>
+<div><label>Precio por bulto ($)</label><input id="aPrecio" type="number" min="0" required></div>
+<div><label>Potrero</label><input id="aPotrero"></div>
+<div><label>Fecha</label><input id="aFecha" type="date" required></div>
+</div><button class="boton">Guardar agroquímico</button></form></div>
+<div class="panel"><h3>Historial de mantenimiento</h3><div class="tabla"><table><thead><tr><th>Tipo</th><th>Producto</th><th>Cantidad</th><th>Precio unitario</th><th>Total</th><th>Potrero</th><th>Fecha</th><th>Acción</th></tr></thead><tbody id="tablaMantenimiento"></tbody></table></div></div>
+<p class="nota">Las dosis son datos de referencia del proyecto. Para cualquier aplicación real se deben seguir la etiqueta del fabricante y las indicaciones de personal capacitado.</p>
+</section>
+
+<section id="peones" class="seccion">
+<h2>Registro de peones</h2><div class="panel"><h3>Registrar jornada de trabajo</h3><form id="formPeon"><div class="grid">
+<div><label>Nombre del trabajador</label><input id="tNombre" required></div>
+<div><label>Horas trabajadas</label><input id="tHoras" type="number" min="0.1" step="0.1" required></div>
+<div><label>Pago por hora ($)</label><input id="tPago" type="number" min="0" step="0.01" required></div>
+<div><label>Fecha de trabajo</label><input id="tFecha" type="date" required></div>
+</div><button class="boton">Guardar pago</button></form></div>
+<div class="panel"><h3>Pagos registrados</h3><div class="tabla"><table><thead><tr><th>Trabajador</th><th>Horas</th><th>Pago por hora</th><th>Total</th><th>Fecha</th><th>Acción</th></tr></thead><tbody id="tablaPeones"></tbody></table></div></div>
+</section>
+
+<section id="gastos" class="seccion">
+<h2>Registro de gastos</h2><div class="panel"><h3>Capturar gasto</h3><form id="formGasto"><div class="grid">
+<div><label>Concepto</label><input id="xConcepto" required></div>
+<div><label>Cantidad ($)</label><input id="xCantidad" type="number" min="0.01" step="0.01" required></div>
+<div><label>Fecha</label><input id="xFecha" type="date" required></div>
+</div><label>Observaciones</label><textarea id="xObs" rows="2"></textarea><button class="boton">Guardar gasto</button></form></div>
+<div class="panel"><h3>Historial de gastos</h3><div class="tabla"><table><thead><tr><th>Concepto</th><th>Cantidad</th><th>Fecha</th><th>Observaciones</th><th>Acción</th></tr></thead><tbody id="tablaGastos"></tbody></table></div><h3 id="sumaGastos">Total de gastos: $0.00</h3></div>
+</section>
+</main>
+<footer><p>TIERRA RL | Sistema de administración y control del rancho</p><p>Proyecto escolar | CBTIS No. 67</p></footer>
+
+<script>
+
+// Pantalla de acceso de demostración
+const pantallaAcceso = document.getElementById('pantallaAcceso');
+const formAcceso = document.getElementById('formAcceso');
+const usuarioAcceso = document.getElementById('usuarioAcceso');
+const claveAcceso = document.getElementById('claveAcceso');
+const errorAcceso = document.getElementById('errorAcceso');
+
+formAcceso.addEventListener('submit', function(evento) {
+ evento.preventDefault();
+ const nombre = usuarioAcceso.value.trim();
+ const clave = claveAcceso.value;
+ if (!nombre || !clave.trim()) {
+  errorAcceso.textContent = 'Escribe tu nombre y contraseña para continuar.';
+  return;
+ }
+ sessionStorage.setItem('tierraRL_usuario', nombre);
+ document.getElementById('saludoUsuario').textContent = 'Sesión iniciada: ' + nombre;
+ pantallaAcceso.style.display = 'none';
+ claveAcceso.value = '';
+});
+
+document.getElementById('cerrarSesion').addEventListener('click', function() {
+ sessionStorage.removeItem('tierraRL_usuario');
+ usuarioAcceso.value = '';
+ claveAcceso.value = '';
+ errorAcceso.textContent = '';
+ pantallaAcceso.style.display = 'flex';
+});
+
+const modulos=['potreros','ganado','mantenimiento','peones','gastos'];
+const datos={};
+function leer(clave){try{return JSON.parse(localStorage.getItem('tierraRL_'+clave))||[]}catch(e){return []}}
+modulos.forEach(m=>datos[m]=leer(m));
+function persistir(m){localStorage.setItem('tierraRL_'+m,JSON.stringify(datos[m]))}
+function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function moneda(v){return Number(v||0).toLocaleString('es-MX',{style:'currency',currency:'MXN'})}
+document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()=>{
+ document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));
+ document.querySelectorAll('.seccion').forEach(x=>x.classList.remove('activa'));
+ b.classList.add('active');document.getElementById(b.dataset.seccion).classList.add('activa');
+}));
+function borrar(m,i){if(confirm('¿Deseas eliminar este registro?')){datos[m].splice(i,1);persistir(m);actualizar()}}
+function acciones(m,i){return `<button class="boton borrar" type="button" onclick="borrar('${m}',${i})">Eliminar</button>`}
+
+document.getElementById('formPotrero').addEventListener('submit',e=>{
+ e.preventDefault();
+ const estado=document.getElementById('pEstado').value, ha=Number(document.getElementById('pHectareas').value);
+ let capacidad=Number(document.getElementById('pCapacidad').value||0);
+ if(estado==='Alta'&&capacidad!==ha){alert('En estado Alta, la capacidad debe coincidir con las hectáreas.');return}
+ if(estado==='Baja')capacidad=0;
+ datos.potreros.push({nombre:pNombre.value,estado,hectareas:ha,pasto:pPasto.value,capacidad,fecha:pFecha.value,obs:pObs.value});
+ persistir('potreros');e.target.reset();actualizar();alert('Potrero guardado.');
+});
+function pintarPotreros(){tablaPotreros.innerHTML=datos.potreros.map((p,i)=>`<tr><td>${esc(p.nombre)}</td><td><span class="estado ${p.estado.toLowerCase()}">${esc(p.estado)}</span></td><td>${p.hectareas}</td><td>${esc(p.pasto)}</td><td>${p.capacidad}</td><td>${esc(p.fecha)}</td><td>${esc(p.obs)}</td><td>${acciones('potreros',i)}</td></tr>`).join('')}
+
+document.getElementById('formGanado').addEventListener('submit',e=>{
+ e.preventDefault();datos.ganado.push({id:gId.value,tipo:gTipo.value,cantidad:Number(gCantidad.value),potrero:gPotrero.value,fecha:gFecha.value});
+ persistir('ganado');e.target.reset();actualizar();alert('Registro de ganado guardado.');
+});
+function pintarGanado(){tablaGanado.innerHTML=datos.ganado.map((g,i)=>`<tr><td>${esc(g.id)}</td><td>${esc(g.tipo)}</td><td>${g.cantidad}</td><td>${esc(g.potrero)}</td><td>${esc(g.fecha)}</td><td>${acciones('ganado',i)}</td></tr>`).join('')}
+
+const preciosH={'Dragón 101':290,'Defensa':280,'Togar':750,'UZZI 101':260};
+hProducto.addEventListener('change',()=>hPrecio.value=preciosH[hProducto.value]);
+hPrecio.value=preciosH[hProducto.value];
+document.getElementById('formHerbicida').addEventListener('submit',e=>{
+ e.preventDefault();const cantidad=Number(hCantidad.value),precio=Number(hPrecio.value);
+ datos.mantenimiento.push({tipo:'Herbicida',producto:hProducto.value,cantidad,precio,total:cantidad*precio,potrero:hPotrero.value,fecha:hFecha.value});
+ persistir('mantenimiento');e.target.reset();hPrecio.value=preciosH[hProducto.value];actualizar();alert('Herbicida guardado.');
+});
+aProducto.addEventListener('change',()=>aPrecio.value=aProducto.value==='Sulfato'?500:240);
+aPrecio.value=500;
+document.getElementById('formAgro').addEventListener('submit',e=>{
+ e.preventDefault();const cantidad=Number(aCantidad.value),precio=Number(aPrecio.value);
+ datos.mantenimiento.push({tipo:'Agroquímico',producto:aProducto.value,cantidad,precio,total:cantidad*precio,potrero:aPotrero.value,fecha:aFecha.value});
+ persistir('mantenimiento');e.target.reset();aPrecio.value=500;actualizar();alert('Agroquímico guardado.');
+});
+function pintarMantenimiento(){tablaMantenimiento.innerHTML=datos.mantenimiento.map((m,i)=>`<tr><td>${esc(m.tipo)}</td><td>${esc(m.producto)}</td><td>${m.cantidad}</td><td>${moneda(m.precio)}</td><td>${moneda(m.total)}</td><td>${esc(m.potrero)}</td><td>${esc(m.fecha)}</td><td>${acciones('mantenimiento',i)}</td></tr>`).join('')}
+
+document.getElementById('formPeon').addEventListener('submit',e=>{
+ e.preventDefault();const horas=Number(tHoras.value),pago=Number(tPago.value);
+ datos.peones.push({nombre:tNombre.value,horas,pago,total:horas*pago,fecha:tFecha.value});
+ persistir('peones');e.target.reset();actualizar();alert('Pago registrado.');
+});
+function pintarPeones(){tablaPeones.innerHTML=datos.peones.map((p,i)=>`<tr><td>${esc(p.nombre)}</td><td>${p.horas}</td><td>${moneda(p.pago)}</td><td>${moneda(p.total)}</td><td>${esc(p.fecha)}</td><td>${acciones('peones',i)}</td></tr>`).join('')}
+
+document.getElementById('formGasto').addEventListener('submit',e=>{
+ e.preventDefault();datos.gastos.push({concepto:xConcepto.value,cantidad:Number(xCantidad.value),fecha:xFecha.value,obs:xObs.value});
+ persistir('gastos');e.target.reset();actualizar();alert('Gasto guardado.');
+});
+function pintarGastos(){tablaGastos.innerHTML=datos.gastos.map((g,i)=>`<tr><td>${esc(g.concepto)}</td><td>${moneda(g.cantidad)}</td><td>${esc(g.fecha)}</td><td>${esc(g.obs)}</td><td>${acciones('gastos',i)}</td></tr>`).join('');
+ sumaGastos.textContent='Total de gastos: '+moneda(datos.gastos.reduce((s,g)=>s+Number(g.cantidad),0));
+}
+function actualizar(){
+ pintarPotreros();pintarGanado();pintarMantenimiento();pintarPeones();pintarGastos();
+ resPotreros.textContent=datos.potreros.length;resGanado.textContent=datos.ganado.length;
+ resPeones.textContent=datos.peones.length;
+ resGastos.textContent=moneda(datos.gastos.reduce((s,g)=>s+Number(g.cantidad),0));
+}
+actualizar();
+</script>
+</body>
+</html>
